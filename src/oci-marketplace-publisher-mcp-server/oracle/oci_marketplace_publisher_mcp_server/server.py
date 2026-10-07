@@ -36,6 +36,10 @@ def _data(response):
     return oci.util.to_dict(response.data)
 
 
+def _not_deleted(revision):
+    return getattr(revision, "lifecycle_state", None) != "DELETED"
+
+
 def _oci_field(field_type: str, value):
     if value is None:
         return None
@@ -159,7 +163,13 @@ def list_publisher_revisions(
 ) -> list[dict]:
     """List all revisions and statuses for a listing."""
     publisher, _ = _clients()
-    return [oci.util.to_dict(item) for item in _all(publisher.list_listing_revisions, listing_id)]
+    listing = publisher.get_listing(listing_id).data
+    return [
+        oci.util.to_dict(item)
+        for item in _all(
+            publisher.list_listing_revisions, listing_id, compartment_id=listing.compartment_id
+        )
+    ]
 
 
 def inspect_revision_assets(
@@ -193,13 +203,20 @@ def clone_publisher_revision(
     source = publisher.get_listing_revision(listing_revision_id).data
     if source.status not in {"PUBLISHED", "PUBLISHED_AS_PRIVATE", "UNPUBLISHED"}:
         raise ValueError("Source must be PUBLISHED, PUBLISHED_AS_PRIVATE, or UNPUBLISHED")
-    before = _all(publisher.list_listing_revisions, source.listing_id)
-    if any(item.status == "NEW" for item in before):
+    before = _all(
+        publisher.list_listing_revisions, source.listing_id, compartment_id=source.compartment_id
+    )
+    if any(item.status == "NEW" and _not_deleted(item) for item in before):
         raise ValueError("A NEW revision already exists for this listing; edit or submit it first")
     old_ids = {item.id for item in before}
     publisher.clone_listing_revision(listing_revision_id)
-    after = _all(publisher.list_listing_revisions, source.listing_id)
-    cloned = next((item for item in after if item.status == "NEW" and item.id not in old_ids), None)
+    after = _all(
+        publisher.list_listing_revisions, source.listing_id, compartment_id=source.compartment_id
+    )
+    cloned = next(
+        (item for item in after if item.status == "NEW" and _not_deleted(item) and item.id not in old_ids),
+        None,
+    )
     return {
         "source_revision_id": listing_revision_id,
         "new_revision_id": cloned.id if cloned else None,
@@ -353,7 +370,13 @@ def create_publisher_revision(
     if model_pair is None:
         raise ValueError("Unsupported listing type")
     values = _revision_options(model_pair[0], fields, {"listing_id", "listing_type", "status"})
-    revisions = _all(publisher.list_listing_revisions, listing_id)
+    revisions = [
+        item
+        for item in _all(
+            publisher.list_listing_revisions, listing_id, compartment_id=listing.compartment_id
+        )
+        if _not_deleted(item)
+    ]
     if any(item.status == "NEW" for item in revisions):
         raise ValueError("A NEW revision already exists; edit or submit it instead")
     if any(item.status in {"PUBLISHED", "PUBLISHED_AS_PRIVATE"} for item in revisions):
@@ -378,6 +401,8 @@ def update_publisher_revision(
     revision = publisher.get_listing_revision(listing_revision_id).data
     if revision.status not in {"NEW", "REJECTED"}:
         raise ValueError("Revision must be NEW or REJECTED")
+    if revision.lifecycle_state != "ACTIVE":
+        raise ValueError("Revision lifecycle must be ACTIVE")
     model_pair = _REVISION_MODELS.get(revision.listing_type)
     if model_pair is None:
         raise ValueError("Unsupported listing type")
@@ -423,7 +448,13 @@ def create_lead_generation_revision(
     listing = publisher.get_listing(listing_id).data
     if listing.listing_type != "LEAD_GENERATION":
         raise ValueError("Listing must have type LEAD_GENERATION")
-    revisions = _all(publisher.list_listing_revisions, listing_id)
+    revisions = [
+        item
+        for item in _all(
+            publisher.list_listing_revisions, listing_id, compartment_id=listing.compartment_id
+        )
+        if _not_deleted(item)
+    ]
     if any(item.status == "NEW" for item in revisions):
         raise ValueError("A NEW revision already exists; edit or submit it instead")
     if any(item.status in {"PUBLISHED", "PUBLISHED_AS_PRIVATE"} for item in revisions):
@@ -474,6 +505,8 @@ def update_lead_generation_revision(
     revision = publisher.get_listing_revision(listing_revision_id).data
     if revision.listing_type != "LEAD_GENERATION" or revision.status not in {"NEW", "REJECTED"}:
         raise ValueError("Revision must be lead generation and editable (NEW or REJECTED)")
+    if revision.lifecycle_state != "ACTIVE":
+        raise ValueError("Revision lifecycle must be ACTIVE")
     details = oci.marketplace_publisher.models.UpdateLeadGenListingRevisionDetails(**changes)
     return _data(publisher.update_listing_revision(listing_revision_id, details))
 
