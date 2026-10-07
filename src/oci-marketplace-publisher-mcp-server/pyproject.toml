@@ -1,0 +1,42 @@
+[project]
+name = "oracle.oci-marketplace-publisher-mcp-server"
+version = "0.1.0"
+description = "OCI Marketplace publisher MCP server"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "UPL-1.0"
+license-files = ["LICENSE.txt"]
+authors = [{name = "Seyma Guleryuz"}]
+dependencies = [
+    "fastmcp==3.4.5",
+    "oci==2.185.1",
+    "oracle-mcp-common>=0.1.2,<0.2.0",
+]
+
+[project.scripts]
+"oracle.oci-marketplace-publisher-mcp-server" = "oracle.oci_marketplace_publisher_mcp_server.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["oracle"]
+exclude = ["/oracle/**/tests/**"]
+
+[tool.uv.sources]
+oracle-mcp-common = { workspace = true }
+
+[tool.uv.workspace]
+members = ["../common"]
+
+[dependency-groups]
+dev = ["pytest>=9.0.3", "pytest-cov>=7.0.0"]
+
+[tool.coverage.run]
+omit = ["**/__init__.py", "**/tests/*", "dist/*", ".venv/*"]
+
+[tool.coverage.report]
+omit = ["**/__init__.py", "**/tests/*"]
+precision = 2
+fail_under = 90
