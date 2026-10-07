@@ -107,7 +107,15 @@ def test_listing_reads_use_oci_response_data(monkeypatch, clients):
 def test_list_revisions_returns_all_pages(monkeypatch, clients):
     publisher, _ = clients
     revision = oci.marketplace_publisher.models.ListingRevisionSummary(id="r1", status="NEW")
-    monkeypatch.setattr(server, "_all", lambda method, listing_id: [revision])
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(compartment_id="publisher-compartment"))
+
+    def revisions(method, listing_id, **kwargs):
+        assert method == publisher.list_listing_revisions
+        assert listing_id == "listing"
+        assert kwargs["compartment_id"] == "publisher-compartment"
+        return [revision]
+
+    monkeypatch.setattr(server, "_all", revisions)
     result = server.list_publisher_revisions("listing")
     assert result[0]["id"] == "r1" and result[0]["status"] == "NEW"
 
@@ -143,12 +151,16 @@ def test_revision_assets_lists_attachments_and_packages(monkeypatch, clients):
 def test_clone_published_revision_finds_new_copy(monkeypatch, clients):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(
-        data=SimpleNamespace(id="r1", listing_id="listing", status="PUBLISHED")
+        data=SimpleNamespace(id="r1", listing_id="listing", compartment_id="publisher-compartment", status="PUBLISHED")
     )
     before = [SimpleNamespace(id="r1", status="PUBLISHED")]
     after = before + [SimpleNamespace(id="r2", status="NEW")]
     pages = iter([before, after])
-    monkeypatch.setattr(server, "_all", lambda method, listing_id: next(pages))
+    def revisions(method, listing_id, **kwargs):
+        assert kwargs["compartment_id"] == "publisher-compartment"
+        return next(pages)
+
+    monkeypatch.setattr(server, "_all", revisions)
     result = server.clone_publisher_revision("r1", True)
     assert result == {"source_revision_id": "r1", "new_revision_id": "r2", "clone_requested": True}
 
@@ -156,12 +168,12 @@ def test_clone_published_revision_finds_new_copy(monkeypatch, clients):
 def test_clone_refuses_existing_new_revision(monkeypatch, clients):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(
-        data=SimpleNamespace(id="r1", listing_id="listing", status="PUBLISHED")
+        data=SimpleNamespace(id="r1", listing_id="listing", compartment_id="publisher-compartment", status="PUBLISHED")
     )
     monkeypatch.setattr(
         server,
         "_all",
-        lambda method, listing_id: [
+        lambda method, listing_id, **kwargs: [
             SimpleNamespace(id="r1", status="PUBLISHED"),
             SimpleNamespace(id="r2", status="NEW"),
         ],
@@ -169,6 +181,21 @@ def test_clone_refuses_existing_new_revision(monkeypatch, clients):
     with pytest.raises(ValueError, match="NEW revision already exists"):
         server.clone_publisher_revision("r1", True)
     publisher.clone_listing_revision.assert_not_called()
+
+
+def test_clone_ignores_deleted_new_revision(monkeypatch, clients):
+    publisher, _ = clients
+    publisher.get_listing_revision.return_value = SimpleNamespace(
+        data=SimpleNamespace(id="r1", listing_id="listing", compartment_id="publisher-compartment", status="PUBLISHED")
+    )
+    before = [
+        SimpleNamespace(id="r1", status="PUBLISHED", lifecycle_state="ACTIVE"),
+        SimpleNamespace(id="r2", status="NEW", lifecycle_state="DELETED"),
+    ]
+    after = before + [SimpleNamespace(id="r3", status="NEW", lifecycle_state="ACTIVE")]
+    pages = iter([before, after])
+    monkeypatch.setattr(server, "_all", lambda *args, **kwargs: next(pages))
+    assert server.clone_publisher_revision("r1", True)["new_revision_id"] == "r3"
 
 
 @pytest.mark.parametrize("status", ["NEW", "PENDING_REVIEW", "APPROVED"])
@@ -308,9 +335,15 @@ def test_generic_listing_rejects_unsafe_or_unsupported_inputs(
 
 def test_create_generic_service_revision_converts_nested_fields(monkeypatch, clients):
     publisher, _ = clients
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="SERVICE"))
+    publisher.get_listing.return_value = SimpleNamespace(
+        data=SimpleNamespace(listing_type="SERVICE", compartment_id="publisher-compartment")
+    )
     publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
-    monkeypatch.setattr(server, "_all", lambda *args: [])
+    def revisions(method, listing_id, **kwargs):
+        assert kwargs["compartment_id"] == "publisher-compartment"
+        return []
+
+    monkeypatch.setattr(server, "_all", revisions)
     result = server.create_publisher_revision(
         "listing",
         {
@@ -330,8 +363,8 @@ def test_create_generic_service_revision_converts_nested_fields(monkeypatch, cli
 
 def test_create_generic_revision_requires_clone_for_published(monkeypatch, clients):
     publisher, _ = clients
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="OCI_APPLICATION"))
-    monkeypatch.setattr(server, "_all", lambda *args: [SimpleNamespace(id="r1", status="PUBLISHED")])
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="OCI_APPLICATION", compartment_id="publisher-compartment"))
+    monkeypatch.setattr(server, "_all", lambda *args, **kwargs: [SimpleNamespace(id="r1", status="PUBLISHED")])
     with pytest.raises(ValueError, match="clone"):
         server.create_publisher_revision("listing", {"display_name": "App", "headline": "Headline"}, True)
     publisher.create_listing_revision.assert_not_called()
@@ -346,8 +379,8 @@ def test_create_generic_revision_requires_public_title(clients):
 
 def test_create_generic_revision_rejects_existing_draft(monkeypatch, clients):
     publisher, _ = clients
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="SERVICE"))
-    monkeypatch.setattr(server, "_all", lambda *args: [SimpleNamespace(id="r1", status="NEW")])
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="SERVICE", compartment_id="publisher-compartment"))
+    monkeypatch.setattr(server, "_all", lambda *args, **kwargs: [SimpleNamespace(id="r1", status="NEW")])
     with pytest.raises(ValueError, match="NEW revision"):
         server.create_publisher_revision("listing", {"display_name": "Service", "headline": "Help"}, True)
     publisher.create_listing_revision.assert_not_called()
@@ -356,7 +389,7 @@ def test_create_generic_revision_rejects_existing_draft(monkeypatch, clients):
 def test_update_generic_oci_revision_converts_pricing_plan(clients):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(
-        data=SimpleNamespace(listing_type="OCI_APPLICATION", status="NEW")
+        data=SimpleNamespace(listing_type="OCI_APPLICATION", status="NEW", lifecycle_state="ACTIVE")
     )
     publisher.update_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
     server.update_publisher_revision(
@@ -382,6 +415,17 @@ def test_update_generic_revision_rejects_pending_review(clients):
     publisher.update_listing_revision.assert_not_called()
 
 
+def test_update_generic_revision_rejects_deleted_draft(clients):
+    publisher, _ = clients
+    publisher.get_listing_revision.return_value = SimpleNamespace(
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", status="NEW", lifecycle_state="DELETED")
+    )
+    publisher.update_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
+    with pytest.raises(ValueError, match="ACTIVE"):
+        server.update_publisher_revision("r1", {"headline": "Revised"}, True)
+    publisher.update_listing_revision.assert_not_called()
+
+
 def test_publish_public_approved_revision(clients):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(data=SimpleNamespace(status="APPROVED"))
@@ -392,8 +436,14 @@ def test_publish_public_approved_revision(clients):
 
 def test_create_revision_uses_lead_generation_model(monkeypatch, clients):
     publisher, _ = clients
-    monkeypatch.setattr(server, "_all", lambda *args: [])
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION"))
+    def revisions(method, listing_id, **kwargs):
+        assert kwargs["compartment_id"] == "publisher-compartment"
+        return []
+
+    monkeypatch.setattr(server, "_all", revisions)
+    publisher.get_listing.return_value = SimpleNamespace(
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", compartment_id="publisher-compartment")
+    )
     publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "revision"})
     result = server.create_lead_generation_revision(
         "listing", "Name", "Headline", "Summary", "FREE", ["DATABASE"]
@@ -408,8 +458,8 @@ def test_create_revision_uses_lead_generation_model(monkeypatch, clients):
 
 def test_create_revision_accepts_guideline_fields_and_nested_products(monkeypatch, clients):
     publisher, _ = clients
-    monkeypatch.setattr(server, "_all", lambda *args: [])
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION"))
+    monkeypatch.setattr(server, "_all", lambda *args, **kwargs: [])
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION", compartment_id="publisher-compartment"))
     publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
     server.create_lead_generation_revision(
         "listing",
@@ -478,12 +528,12 @@ def test_create_revision_rejects_other_listing_type(clients):
 
 def test_create_revision_requires_clone_when_published_exists(monkeypatch, clients):
     publisher, _ = clients
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION"))
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION", compartment_id="publisher-compartment"))
     publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "r2"})
     monkeypatch.setattr(
         server,
         "_all",
-        lambda *args: [SimpleNamespace(id="r1", status="PUBLISHED")],
+        lambda *args, **kwargs: [SimpleNamespace(id="r1", status="PUBLISHED")],
     )
     with pytest.raises(ValueError, match="clone"):
         server.create_lead_generation_revision("listing", "Name", "Headline", "Summary", "FREE", ["DATABASE"])
@@ -492,12 +542,26 @@ def test_create_revision_requires_clone_when_published_exists(monkeypatch, clien
 
 def test_create_revision_refuses_existing_new_draft(monkeypatch, clients):
     publisher, _ = clients
-    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION"))
+    publisher.get_listing.return_value = SimpleNamespace(data=SimpleNamespace(listing_type="LEAD_GENERATION", compartment_id="publisher-compartment"))
     publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "r2"})
-    monkeypatch.setattr(server, "_all", lambda *args: [SimpleNamespace(id="r1", status="NEW")])
+    monkeypatch.setattr(server, "_all", lambda *args, **kwargs: [SimpleNamespace(id="r1", status="NEW")])
     with pytest.raises(ValueError, match="NEW revision"):
         server.create_lead_generation_revision("listing", "Name", "Headline", "Summary", "FREE", ["DATABASE"])
     publisher.create_listing_revision.assert_not_called()
+
+
+def test_create_revision_ignores_deleted_new_draft(monkeypatch, clients):
+    publisher, _ = clients
+    publisher.get_listing.return_value = SimpleNamespace(
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", compartment_id="publisher-compartment")
+    )
+    publisher.create_listing_revision.return_value = SimpleNamespace(data={"id": "r2"})
+    monkeypatch.setattr(
+        server, "_all", lambda *args, **kwargs: [SimpleNamespace(id="r1", status="NEW", lifecycle_state="DELETED")]
+    )
+    assert server.create_lead_generation_revision(
+        "listing", "Name", "Headline", "Summary", "FREE", ["DATABASE"]
+    )["id"] == "r2"
 
 
 def test_update_requires_change():
@@ -508,7 +572,7 @@ def test_update_requires_change():
 def test_update_accepts_support_and_listing_metadata(clients):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(
-        data=SimpleNamespace(listing_type="LEAD_GENERATION", status="NEW")
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", status="NEW", lifecycle_state="ACTIVE")
     )
     publisher.update_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
     server.update_lead_generation_revision(
@@ -534,7 +598,7 @@ def test_update_rejects_controlled_field(clients):
 def test_update_editable_revision(clients, status):
     publisher, _ = clients
     publisher.get_listing_revision.return_value = SimpleNamespace(
-        data=SimpleNamespace(listing_type="LEAD_GENERATION", status=status)
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", status=status, lifecycle_state="ACTIVE")
     )
     publisher.update_listing_revision.return_value = SimpleNamespace(data=SimpleNamespace(id="revision"))
     server.update_lead_generation_revision("revision", headline="New")
@@ -550,6 +614,17 @@ def test_update_rejects_noneditable_revision(clients, listing_type, status):
     )
     with pytest.raises(ValueError, match="editable"):
         server.update_lead_generation_revision("revision", headline="New")
+    publisher.update_listing_revision.assert_not_called()
+
+
+def test_update_lead_generation_rejects_deleted_draft(clients):
+    publisher, _ = clients
+    publisher.get_listing_revision.return_value = SimpleNamespace(
+        data=SimpleNamespace(listing_type="LEAD_GENERATION", status="NEW", lifecycle_state="DELETED")
+    )
+    publisher.update_listing_revision.return_value = SimpleNamespace(data={"id": "r1"})
+    with pytest.raises(ValueError, match="ACTIVE"):
+        server.update_lead_generation_revision("r1", headline="Revised")
     publisher.update_listing_revision.assert_not_called()
 
 
