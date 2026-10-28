@@ -46,6 +46,10 @@ The bundled skills guide the publisher from their current stage to the requested
 
 When the MCP cannot perform a required Console action, the assistant identifies the exact page, field, and expected result. It can guide the in-app browser when the publisher chooses that path and browser tools are available; otherwise it gives a focused human handoff and resumes after checking the result. Customer password/MFA entry, agreement acceptance, administrator work, and Oracle review remain explicit handoffs. A blocked step preserves the draft and IDs; it does not restart registration, silently switch accounts, or imply approval.
 
+### Lead Generation flow
+
+The lead-generation skill reviews supplied content or a PDF, proposes field-level improvements, guides sign-in and field discovery, creates the listing and its revision in one guided task, then saves or submits according to the publisher's request. The two API creation calls are not atomic; partial results preserve the listing ID for recovery. OPN/OCMA state is advisory for this flow's preparation, creation, and authorized submission attempt; record the warning and let the service enforce its requirements. This does not waive Oracle requirements, authorize agreement acceptance, or imply publication readiness. On a `listing-count` limit error, ask whether the publisher wants to review exact listing targets for confirmed deletion or request a quota increase. The server has no deletion, PDF extraction, asset upload, or limit-request tool; use available chosen Console/CLI/document capabilities or a precise handoff.
+
 ## Workflow
 
 Choose inspection or a change first. Inspection reads the supplied resource directly and does not require creation onboarding. For creation or release actions, apply the relevant checks below.

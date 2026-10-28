@@ -8,6 +8,10 @@ metadata:
 
 # Create a publisher listing
 
+## Lead Generation OPN/OCMA advisory rule
+
+For a Lead Generation task, follow the lead-generation skill's scoped rule: record and explain non-active or unknown OPN/OCMA status, but continue preparation, draft creation, and an authorized review-submission attempt. These checks remain pending or unknown; do not certify them as passed. The general readiness gates below do not create an additional assistant stop for these two checks in that flow. Respect authentication, target, permissions, required content, truthful attestations, and actual service rejection; do not bypass Oracle enforcement or accept agreements for the publisher. Other listing types and publication keep their applicable checks.
+
 ## Guide the publisher through the task
 
 - Start from the requested outcome and current stage. Explain the short route to that outcome, then take the next available action. For inspection or advice, finish that request without starting creation or release checks.
