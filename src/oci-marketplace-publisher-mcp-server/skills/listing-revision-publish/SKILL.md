@@ -3,7 +3,7 @@ name: listing-revision-publish
 description: Use when a Marketplace publisher wants to clone, revise, submit, publish, or withdraw a listing revision.
 metadata:
   owner: sguleryuz
-  last_updated: 2026-10-27
+  last_updated: 2026-10-28
 ---
 
 # Revise and publish

@@ -3,7 +3,7 @@ name: lead-generation-listing
 description: Use when a Marketplace publisher wants to create or inspect a lead generation listing and its draft revision.
 metadata:
   owner: sguleryuz
-  last_updated: 2026-10-27
+  last_updated: 2026-10-28
 ---
 
 # Lead generation listing

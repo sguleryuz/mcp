@@ -3,7 +3,7 @@ name: publisher-onboarding
 description: Use when a new or existing Oracle Marketplace partner needs to confirm publisher onboarding before creating listings.
 metadata:
   owner: sguleryuz
-  last_updated: 2026-10-27
+  last_updated: 2026-10-28
 ---
 
 # Publisher onboarding

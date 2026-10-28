@@ -3,7 +3,7 @@ name: publisher-listing-types
 description: Use when a Marketplace publisher is unsure which listing type fits their offer, or wants to create a Lead Generation, Service, or OCI Application draft.
 metadata:
   owner: sguleryuz
-  last_updated: 2026-10-27
+  last_updated: 2026-10-28
 ---
 
 # Create a publisher listing
@@ -24,6 +24,6 @@ Give a short recommendation in plain language: the type and package (if any), wh
 
 For `LEAD_GENERATION` or `SERVICE`, use package type `NONE`. For `OCI_APPLICATION`, select a supported SDK package type: `CONTAINER_IMAGE`, `HELM_CHART`, `MACHINE_IMAGE`, or `STACK`. Oracle's Console documentation also describes paid SaaS, but the installed SDK's listing model does not expose a SaaS package type; use the Console for that option. Package upload, artwork, terms, and other attachments remain Console steps for all types.
 
-Before creation, complete the `publisher-onboarding` checks. Collect the internal listing name, compartment OCID, and type-specific revision metadata from the publisher. Use `create_publisher_listing` only after showing the exact listing type and package type and receiving approval. Save the listing OCID. Use `create_publisher_revision` with the fields supported by the installed SDK model, including public `display_name` and `headline`, only after reviewing those values and receiving approval. Nested fields use OCI SDK snake_case names. If draft creation fails, report the listing OCID so the publisher can resume without creating a duplicate.
+Before creation, complete the `publisher-onboarding` checks. Collect the internal listing name, compartment OCID, and type-specific revision metadata from the publisher. List existing listings in that compartment and check the approved name before creating another. Use `create_publisher_listing` only after showing the exact listing type and package type and receiving approval. Save the listing OCID. Use `create_publisher_revision` with the fields supported by the installed SDK model, including public `display_name` and `headline`, only after reviewing those values and receiving approval. Nested fields use OCI SDK snake_case names. If draft creation fails, report the listing OCID so the publisher can resume without creating a duplicate. After an ambiguous creation timeout, reconcile the compartment or known listing by name, type, ID, and revision content before retrying; if no unique result is found, report the outcome as unknown and stop.
 
-For an existing listing, call `list_publisher_revisions` first. Edit an existing `NEW` draft; if a revision is already published, use `clone_publisher_revision` through the `listing-revision-publish` skill. Do not create a second `NEW` revision. After creation, call `get_publisher_revision` and report its OCID and status. Use `inspect_revision_assets` and the listing-type guide to identify remaining Console work before review; an empty attachment or package inventory is not a completed guideline check.
+For an existing listing, call `list_publisher_revisions` first. Edit only an `ACTIVE` revision with `NEW` status; if a revision is already published, use `clone_publisher_revision` through the `listing-revision-publish` skill. Do not create a second `NEW` revision. After creation, call `get_publisher_revision` and report its OCID and status. Use `inspect_revision_assets` and the listing-type guide to identify remaining Console work before review; an empty attachment or package inventory is not a completed guideline check.
