@@ -29,6 +29,20 @@ The lead-generation tools cover modeled revision metadata, including support con
 
 The bundled publisher skills are in [`skills/`](skills/) and are intended for publishers using a Codex-compatible skill runner. The wheel also includes them under `oracle/oci_marketplace_publisher_mcp_server/skills/`. Copy the required skill directories from one pinned release into the runner's skills directory. `lead-generation-listing` uses `publisher-onboarding`, `publisher-iam`, and `listing-revision-publish`; `listing-revision-publish` also uses the onboarding and IAM checks. A missing dependency blocks the dependent workflow. Installing a single skill directory does not install its dependencies.
 
+### Clone a listing revision with OCI CLI
+
+The standalone [`clone-listing-revision` skill](skills/clone-listing-revision/SKILL.md) helps publishers create a new draft in **Marketplace staging (Phoenix)** using their installed OCI CLI and a Codex-compatible runner with terminal access. This version uses `https://cloud-staging.oracle.com` for Console guidance and `https://beta.marketplace-publisher.us-phoenix-1.oci.oracleiaas.com` for every Publisher operation, with no production fallback. Staging access is required. OCI authentication and IAM retain their standard regional identity endpoints. It has no MCP server or other skill dependency. Every new invocation uses `oci session authenticate` with a fresh OCI profile and an isolated browser profile; the publisher completes Oracle login and MFA and verifies the selected tenancy before listing discovery. An installed browser capable of profile isolation is required; the command reference documents the macOS/Linux flow and the boundary for other platforms.
+
+Copy the entire `skills/clone-listing-revision` directory from a pinned checkout or release into your runner's skills directory, including `agents/` and `references/`. For Codex, install it as `$CODEX_HOME/skills/clone-listing-revision` (normally `~/.codex/skills/clone-listing-revision`). Then ask:
+
+```text
+Use $clone-listing-revision to show which of my listings I can clone.
+```
+
+After reviewing the results, select a source with a request such as `Clone option 2`. The skill checks publisher ownership and readiness, active OPN membership and OCMA, publisher logo, source status, conflicting drafts or operations, and applicable package defaults, version uniqueness, and whitespace rules. When the CLI cannot provide required evidence, it asks for the specific current Console or Oracle confirmation and keeps cloning blocked until verified.
+
+The skill refreshes the checks before sending one clone request, verifies the new draft, and resumes inspection after an uncertain result without resending the request. Editing, submission, and publication require separate requests.
+
 ## Development
 
 ```sh
