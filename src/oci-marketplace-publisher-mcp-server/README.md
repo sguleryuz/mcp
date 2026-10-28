@@ -12,7 +12,37 @@ uv --directory src/oci-marketplace-publisher-mcp-server run --locked oracle.oci-
 
 An MCP client can launch the same command with `OCI_CONFIG_PROFILE` set to the intended profile. All tools use that profile's OCI permissions. Set `OCI_REGION=us-ashburn-1` when accessing Marketplace Publisher if the profile has another default region. The server uses `build_auth_context()` and accepts its supported stdio authentication modes.
 
+## Connect the publisher account
+
+The server uses the customer-selected OCI credentials; it does not implement an interactive login tool or take passwords. A Console session and a CLI/MCP session are separate. For a temporary CLI session, have the customer complete browser sign-in after:
+
+```sh
+oci session authenticate --region us-ashburn-1 --profile-name <publisher-profile>
+oci session validate --profile <publisher-profile> --auth security_token
+```
+
+Set `OCI_CONFIG_PROFILE=<publisher-profile>`, `OCI_REGION=us-ashburn-1`, and `OCI_MCP_AUTH_TYPE=security_token` in the MCP client's server environment for that session. An existing API-key profile can use `OCI_MCP_AUTH_TYPE=api_key`; do not replace its credentials unless the customer chooses to. Restart the MCP process after changing its environment. Refreshing a token in the same profile is followed by another read-only check. See [Oracle's session authentication documentation](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/clitoken.htm).
+
+Call `get_publisher_connection_context` to inspect the selected profile, configured tenancy, region, and authentication mode. It returns no keys, tokens, private paths, or signer details, and sets `publisher_access_verified` to false: configuration loading is not evidence of token validity, principal identity, or Publisher access. Compare actual tenancy OCIDs; a profile named after a publisher's tenancy can still contain credentials for another account. Resolve a mismatch before a write. Outside publishers use their own authorized account; internal operator/tenancy overrides are not a customer authentication prerequisite.
+
+For a supplied revision ID, use `get_publisher_revision`; read its parent using `get_publisher_listing` and compare the returned publisher and compartment with the intended target. Use `get_publisher_profile` when verifying that publisher. `list_publisher_listings` is for discovery, and `list_publisher_revisions` is for choosing among revisions. These operation-relevant reads establish only the access they actually exercise. A 401 needs authentication repair; a 403 or `NotAuthorizedOrNotFound` needs target/IAM review, not repeated writes, profile fallback, or automatic access grants. Generic region reads alone do not establish Publisher access.
+
+### Example request
+
+```text
+Use $listing-revision-publish with my configured Publisher MCP tools.
+Tenancy: <tenancy OCID>. Publisher: <publisher OCID>.
+Compartment: <compartment OCID>. Listing: <listing OCID>.
+Inspect revisions and show a proposed headline change to "<headline>".
+Continue an eligible draft, or ask to clone an eligible source if needed.
+Keep the resulting change as a draft.
+```
+
+The skills perform the authorized operation and verify the result when tools and access are available. They report a specific setup or permission blocker when execution is unavailable. Submission and publication remain separately scoped actions; a request acknowledgment is not a completed publication. The standalone skills in the `oracle/skills` contribution also support a guided in-app browser or OCI CLI path without this server.
+
 ## Workflow
+
+Choose inspection or a change first. Inspection reads the supplied resource directly and does not require creation onboarding. For creation or release actions, apply the relevant checks below.
 
 1. Use the [`publisher-onboarding` skill](skills/publisher-onboarding/SKILL.md) to confirm every applicable step, including active OPN membership, active OCMA, production Console registration and approval, Ashburn subscription, and IAM. New partners follow [Oracle's new-partner guide](https://docs.oracle.com/en-us/iaas/Content/Marketplace/new-partners.htm). Existing partners follow the [migration guide](https://docs.oracle.com/en-us/iaas/Content/Marketplace/existing-partners.htm) and check production Publisher Registration before the migration request. `publisher_readiness` fetches detailed Publisher records to report approval and OPN status as well as the Ashburn subscription; it cannot verify OCMA.
 2. Use `list_publisher_policies` for the tenancy root and relevant compartment. Review statements against [Marketplace publisher IAM policy guidance](https://docs.oracle.com/en-us/iaas/Content/Marketplace/publisher-iam-policy.htm). This lists policies; it does not evaluate group membership or effective access.

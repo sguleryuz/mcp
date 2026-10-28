@@ -8,6 +8,14 @@ metadata:
 
 # Create a publisher listing
 
+## Connect and verify the publisher account
+
+Choosing a listing type or explaining requirements needs no sign-in. Before the first private read, call `get_publisher_connection_context` and compare its configured tenancy and region with the publisher's requested account and `us-ashburn-1`. Record the selected profile and authentication mode without requesting or displaying keys, tokens, or passwords. This tool loads configuration; it does not prove token validity, the authenticated principal, or Publisher permissions. A profile name is not tenancy evidence. Resolve any mismatch before a write; never silently switch profiles or use internal operator access for an outside publisher.
+
+If a session is missing or expired, use the customer's chosen profile with `oci session authenticate --region us-ashburn-1 --profile-name <publisher-profile>` when local CLI access is available, and let the customer complete browser password/MFA entry. Validate with `oci session validate --profile <publisher-profile> --auth security_token`. Configure the MCP process with `OCI_CONFIG_PROFILE`, `OCI_REGION=us-ashburn-1`, and `OCI_MCP_AUTH_TYPE=security_token` for that session; preserve an existing API-key setup when selected. Restart the MCP process after changing its environment. Console login alone does not authenticate the server. If local authentication tools are unavailable, give these setup steps and stop private operations until the configured MCP read succeeds.
+
+Use an operation-relevant read to verify access: `get_publisher_revision` for a supplied revision, `get_publisher_listing` for its parent listing, and `get_publisher_profile` when checking publisher identity. Before a write, match the returned listing, publisher, and compartment to the customer's requested target. A 401 needs authentication repair; a 403 or `NotAuthorizedOrNotFound` needs target/IAM investigation, not another write attempt. Perform authorized actions with the tools and re-read their result. Reuse approval covering the exact target and change; do not stop at illustrative instructions when execution was requested and access is verified. Report unavailable capabilities or uncertain outcomes accurately.
+
 ## Choose with the publisher
 
 Do not ask the publisher to pick a listing type before explaining the choices. Ask only the unanswered questions, one at a time:

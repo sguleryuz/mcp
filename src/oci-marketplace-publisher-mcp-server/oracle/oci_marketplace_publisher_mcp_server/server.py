@@ -36,6 +36,18 @@ def _data(response):
     return oci.util.to_dict(response.data)
 
 
+def get_publisher_connection_context() -> dict:
+    """Report configured account metadata, never credentials or proof of Publisher access."""
+    auth = build_auth_context()
+    return {
+        "auth_type": auth.auth_type.value,
+        "profile_name": auth.profile_name,
+        "configured_tenancy_id": auth.tenancy_id,
+        "region": auth.region,
+        "publisher_access_verified": False,
+    }
+
+
 def _not_deleted(revision):
     return getattr(revision, "lifecycle_state", None) != "DELETED"
 
@@ -148,6 +160,14 @@ def list_publisher_listings(
     """List Marketplace publisher listings in a compartment."""
     publisher, _ = _clients()
     return [oci.util.to_dict(item) for item in _all(publisher.list_listings, compartment_id)]
+
+
+def get_publisher_listing(
+    listing_id: Annotated[str, Field(description="Marketplace Publisher listing OCID")],
+) -> dict:
+    """Read a listing's publisher and compartment before acting on its revisions."""
+    publisher, _ = _clients()
+    return _data(publisher.get_listing(listing_id))
 
 
 def get_publisher_revision(
@@ -554,10 +574,12 @@ def publish_lead_generation_revision(
 
 
 for tool in (
+    get_publisher_connection_context,
     publisher_readiness,
     get_publisher_profile,
     list_publisher_policies,
     list_publisher_listings,
+    get_publisher_listing,
     get_publisher_revision,
     list_publisher_revisions,
     inspect_revision_assets,

@@ -10,6 +10,42 @@ import pytest
 import oci
 
 from oracle.oci_marketplace_publisher_mcp_server import server
+from oracle_mcp_common import AuthContext, AuthType
+
+
+@pytest.mark.parametrize(
+    "auth_type,profile,tenancy",
+    [
+        (AuthType.SECURITY_TOKEN, "publisher-session", "requested-tenancy"),
+        (AuthType.API_KEY, "publisher-api", "another-tenancy"),
+        (AuthType.INSTANCE_PRINCIPAL, None, None),
+    ],
+)
+def test_connection_context_exposes_only_configured_account_metadata(
+    monkeypatch, auth_type, profile, tenancy
+):
+    context = AuthContext(
+        auth_type=auth_type,
+        config={
+            "key_content": "PRIVATE KEY CONTENT",
+            "pass_phrase": "PRIVATE PASSPHRASE",
+            "security_token_file": "PRIVATE TOKEN PATH",
+            "user": "possibly-inherited-user",
+        },
+        signer=object(),
+        tenancy_id=tenancy,
+        region="us-ashburn-1",
+        profile_name=profile,
+    )
+    monkeypatch.setattr(server, "build_auth_context", lambda: context)
+
+    assert server.get_publisher_connection_context() == {
+        "auth_type": auth_type.value,
+        "profile_name": profile,
+        "configured_tenancy_id": tenancy,
+        "region": "us-ashburn-1",
+        "publisher_access_verified": False,
+    }
 
 
 def test_publisher_readiness_reports_publisher_and_region(monkeypatch):
@@ -102,6 +138,21 @@ def test_listing_reads_use_oci_response_data(monkeypatch, clients):
     publisher.get_listing_revision.return_value = SimpleNamespace(data={"id": "revision", "status": "NEW"})
     assert server.list_publisher_listings("compartment") == [{"id": "listing"}]
     assert server.get_publisher_revision("revision")["status"] == "NEW"
+
+
+def test_listing_read_returns_publisher_and_compartment(clients):
+    publisher, _ = clients
+    publisher.get_listing.return_value = SimpleNamespace(
+        data=oci.marketplace_publisher.models.Listing(
+            id="listing", publisher_id="publisher", compartment_id="publisher-compartment"
+        )
+    )
+    result = server.get_publisher_listing("listing")
+    assert {key: result.get(key) for key in ("id", "publisher_id", "compartment_id")} == {
+        "id": "listing",
+        "publisher_id": "publisher",
+        "compartment_id": "publisher-compartment",
+    }
 
 
 def test_list_revisions_returns_all_pages(monkeypatch, clients):
@@ -232,6 +283,50 @@ def test_submit_auto_publish_requires_separate_confirmation(clients):
     with pytest.raises(ValueError, match="auto-publication confirmation"):
         server.submit_publisher_revision("r1", True, auto_publish_on_approval=True)
     publisher.submit_listing_revision_for_review.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "operation,args",
+    [
+        ("submit_publisher_revision", ("r1", False)),
+        ("publish_publisher_revision", ("r1", "PUBLIC", False)),
+        ("withdraw_publisher_revision", ("r1", False)),
+        ("create_publisher_revision", ("listing", {}, False)),
+        ("update_publisher_revision", ("r1", {"headline": "Changed"}, False)),
+    ],
+)
+def test_mutations_without_approval_do_not_reach_oci(monkeypatch, operation, args):
+    clients = Mock(side_effect=AssertionError("Unapproved mutation reached OCI"))
+    monkeypatch.setattr(server, "_clients", clients)
+    with pytest.raises(ValueError, match="confirmation"):
+        getattr(server, operation)(*args)
+    clients.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "operation,args,status,error",
+    [
+        ("submit_publisher_revision", ("r1", True), "PUBLISHED", "NEW or REJECTED"),
+        ("publish_publisher_revision", ("r1", "PUBLIC", True), "PENDING_REVIEW", "APPROVED"),
+    ],
+)
+def test_release_rejects_a_revision_that_changed_status(clients, operation, args, status, error):
+    publisher, _ = clients
+    publisher.get_listing_revision.return_value = SimpleNamespace(data=SimpleNamespace(status=status))
+    with pytest.raises(ValueError, match=error):
+        getattr(server, operation)(*args)
+    publisher.submit_listing_revision_for_review.assert_not_called()
+    publisher.publish_listing_revision.assert_not_called()
+    publisher.publish_listing_revision_as_private.assert_not_called()
+
+
+def test_public_publication_uses_only_the_public_api(clients):
+    publisher, _ = clients
+    publisher.get_listing_revision.return_value = SimpleNamespace(data=SimpleNamespace(status="APPROVED"))
+    result = server.publish_publisher_revision("r1", "PUBLIC", True)
+    assert result == {"listing_revision_id": "r1", "visibility": "PUBLIC", "publication_requested": True}
+    publisher.publish_listing_revision.assert_called_once_with("r1")
+    publisher.publish_listing_revision_as_private.assert_not_called()
 
 
 def test_submit_can_request_auto_publish_and_internal_launch(clients):
