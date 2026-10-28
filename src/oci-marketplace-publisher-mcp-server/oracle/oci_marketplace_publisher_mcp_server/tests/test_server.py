@@ -124,6 +124,7 @@ def test_revision_assets_lists_attachments_and_packages(monkeypatch, clients):
     publisher, _ = clients
     revision = oci.marketplace_publisher.models.OciListingRevision(
         id="r1",
+        compartment_id="publisher-compartment",
         listing_type="OCI_APPLICATION",
         status="NEW",
         headline="Headline",
@@ -135,13 +136,12 @@ def test_revision_assets_lists_attachments_and_packages(monkeypatch, clients):
     package = oci.marketplace_publisher.models.ListingRevisionPackageSummary(
         id="p1", package_type="CONTAINER_IMAGE"
     )
-    monkeypatch.setattr(
-        server,
-        "_all",
-        lambda method, revision_id: (
-            [attachment] if method == publisher.list_listing_revision_attachments else [package]
-        ),
-    )
+    def revision_assets(method, revision_id, **kwargs):
+        assert revision_id == "r1"
+        assert kwargs["compartment_id"] == "publisher-compartment"
+        return [attachment] if method == publisher.list_listing_revision_attachments else [package]
+
+    monkeypatch.setattr(server, "_all", revision_assets)
     result = server.inspect_revision_assets("r1")
     assert result["attachments"][0]["id"] == "a1"
     assert result["packages"][0]["id"] == "p1"

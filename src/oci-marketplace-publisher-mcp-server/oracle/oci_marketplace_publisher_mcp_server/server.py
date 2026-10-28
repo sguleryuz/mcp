@@ -178,9 +178,17 @@ def inspect_revision_assets(
     """Inventory revision attachments and packages for a guideline review."""
     publisher, _ = _clients()
     revision = publisher.get_listing_revision(listing_revision_id).data
-    attachments = _all(publisher.list_listing_revision_attachments, listing_revision_id)
+    attachments = _all(
+        publisher.list_listing_revision_attachments,
+        listing_revision_id,
+        compartment_id=revision.compartment_id,
+    )
     packages = (
-        _all(publisher.list_listing_revision_packages, listing_revision_id)
+        _all(
+            publisher.list_listing_revision_packages,
+            listing_revision_id,
+            compartment_id=revision.compartment_id,
+        )
         if revision.listing_type == "OCI_APPLICATION"
         else []
     )
