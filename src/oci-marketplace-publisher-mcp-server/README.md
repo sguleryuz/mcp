@@ -29,6 +29,8 @@ The lead-generation tools cover modeled revision metadata, including support con
 
 The bundled publisher skills are in [`skills/`](skills/) and are intended for publishers using a Codex-compatible skill runner. The wheel also includes them under `oracle/oci_marketplace_publisher_mcp_server/skills/`. Copy the required skill directories from one pinned release into the runner's skills directory. `lead-generation-listing` uses `publisher-onboarding`, `publisher-iam`, and `listing-revision-publish`; `listing-revision-publish` also uses the onboarding and IAM checks. A missing dependency blocks the dependent workflow. Installing a single skill directory does not install its dependencies.
 
+For Oracle Marketplace service support, use [Oracle Support](https://support.oracle.com/). For MCP server issues, use this repository's [issue tracker](https://github.com/oracle/mcp/issues); for the standalone publisher skill instructions, use [oracle/skills issues](https://github.com/oracle/skills/issues).
+
 ## Development
 
 ```sh

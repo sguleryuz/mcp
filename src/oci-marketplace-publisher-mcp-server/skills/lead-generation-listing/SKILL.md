@@ -6,7 +6,7 @@ metadata:
   last_updated: 2026-10-28
 ---
 
-# Lead generation listing
+# Marketplace Lead Generation Listing Assistant
 
 Choose the requested operation first. For inspection, call `get_publisher_revision` directly when a revision OCID is supplied and its details or status are requested; call `list_publisher_revisions` when only a listing OCID is supplied; use `list_publisher_listings` for compartment discovery. Inspection needs no creation onboarding or mutation. Report observed IDs, lifecycle and review statuses. For creation, verify that bundled `publisher-onboarding`, `publisher-iam`, and `listing-revision-publish` are installed from the same release; stop and name any missing skill. Load onboarding guidance for applicable creation checks, IAM guidance when policy review is needed, and revision guidance when an existing revision needs lifecycle action. Reuse a current `publisher_readiness` result from onboarding only when it covers the same tenancy and compartment; otherwise refresh it before creation. If there is no approved publisher or a required creation check is pending or unknown, stop creation and report what remains. Pending supplier verification alone does not block a paid draft, but blocks publication.
 
