@@ -8,6 +8,22 @@ metadata:
 
 # Create a publisher listing
 
+## Guide the publisher through the task
+
+- Start from the requested outcome and current stage. Explain the short route to that outcome, then take the next available action. For inspection or advice, finish that request without starting creation or release checks.
+- Ask one short question at a time for the next missing decision. Reuse answers and current evidence across skills. Discover resource IDs with scoped reads or Console navigation; do not require a publisher to know OCIDs, API field names, or listing types before helping them.
+- Explain what the next action does and what result to expect. Perform authorized tool actions yourself; use a human handoff only for credentials, agreements, decisions, or capabilities you cannot operate. A documentation link supplements guidance; it does not complete the task.
+- At a handoff, give the exact Console location or command, the field or action needed, and the result to look for. Request only the relevant non-secret status or error. After the publisher returns, inspect the result and resume the same listing/revision rather than restarting the intake.
+- When blocked, preserve known IDs and completed work. Explain the specific blocker in plain language, guide its next remedy, and recheck before resuming. Stop dependent writes while authentication, permissions, required readiness, or an ambiguous result is unresolved; continue independent preparation when useful.
+- Before a change, summarize the target, exact change, and effect in publisher language. Reuse approval already covering that action; ask again only for missing authorization or changed scope. Keep draft saving, Oracle review, and public/private publication distinct.
+- After each completed stage, state what was verified and what comes next. At completion or a required pause, give the observed status, resource link/IDs when known, remaining blocker and owner, and the exact next action. Never label a handoff, request acknowledgment, or illustrative scenario as completed execution.
+
+## Continue from an idea to the chosen workflow
+
+- Accept a plain-language solution description. When a publisher does not know an answer, explain the remaining choices using their offering, then ask the question that distinguishes them; do not guess a commercial model or deployment artifact.
+- For a recommendation-only request, explain the recommended customer experience and finish. When the publisher also requested creation, carry their confirmed answers into the selected listing workflow instead of ending at the recommendation or repeating the intake.
+- For a package or listing type unavailable through the current tool, explain the supported Console route and guide it when browser tools are available and the publisher chooses that path. Otherwise give a specific handoff and resume after its result. Never promise an unsupported package or type conversion.
+
 ## Connect and verify the publisher account
 
 Choosing a listing type or explaining requirements needs no sign-in. Before the first private read, call `get_publisher_connection_context` and compare its configured tenancy and region with the publisher's requested account and `us-ashburn-1`. Record the selected profile and authentication mode without requesting or displaying keys, tokens, or passwords. This tool loads configuration; it does not prove token validity, the authenticated principal, or Publisher permissions. A profile name is not tenancy evidence. Resolve any mismatch before a write; never silently switch profiles or use internal operator access for an outside publisher.

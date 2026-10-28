@@ -40,6 +40,12 @@ Keep the resulting change as a draft.
 
 The skills perform the authorized operation and verify the result when tools and access are available. They report a specific setup or permission blocker when execution is unavailable. Submission and publication remain separately scoped actions; a request acknowledgment is not a completed publication. The standalone skills in the `oracle/skills` contribution also support a guided in-app browser or OCI CLI path without this server.
 
+## Guided publisher experience
+
+The bundled skills guide the publisher from their current stage to the requested result. They ask for the next missing decision, reuse evidence and resource IDs between skills, perform supported authorized actions, and verify each result. Publishers can start with their offering or a listing name/link rather than SDK fields or OCIDs.
+
+When the MCP cannot perform a required Console action, the assistant identifies the exact page, field, and expected result. It can guide the in-app browser when the publisher chooses that path and browser tools are available; otherwise it gives a focused human handoff and resumes after checking the result. Customer password/MFA entry, agreement acceptance, administrator work, and Oracle review remain explicit handoffs. A blocked step preserves the draft and IDs; it does not restart registration, silently switch accounts, or imply approval.
+
 ## Workflow
 
 Choose inspection or a change first. Inspection reads the supplied resource directly and does not require creation onboarding. For creation or release actions, apply the relevant checks below.
