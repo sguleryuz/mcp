@@ -571,6 +571,26 @@ uvx --refresh-package oracle.oci-api-mcp-server \
 
 Replace `<published-version>` with the version you released.
 
+## Agent skills
+
+Reusable agent workflows live under `skills/`. The
+[Publisher Artifact Creator](skills/publisher-create-artifact/SKILL.md) asks for a
+source OCID, registry reference, or configuration package, verifies Compute images,
+container images, Helm charts, and Terraform stacks, and creates the matching
+artifact through the Marketplace Publisher Console. It
+then recommends an OCI Application Listing package type and reminds the publisher
+to create a term and term version. The artifact destination is automatically Ashburn
+(`us-ashburn-1`); the skill does not ask the publisher for a region. Compute image
+sources must have a Phoenix (`phx`) or Ashburn (`iad`) image OCID; otherwise the
+skill requests a different image OCID.
+
+For Codex, copy `skills/publisher-create-artifact` into your personal skills
+directory (`$CODEX_HOME/skills`, or `~/.codex/skills` when `CODEX_HOME` is unset),
+then invoke `$publisher-create-artifact`. The workflow requires an authenticated
+OCI Console session and browser/computer-use tools; these MCP servers alone do
+not provide UI automation. Creating listings and terms requires a separate
+request.
+
 ## Contributing
 
 This project welcomes contributions from the community. Before submitting a pull 

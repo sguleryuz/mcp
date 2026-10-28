@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publisher Artifact Creator"
+  short_description: "Create Marketplace Publisher artifacts in Ashburn"
+  default_prompt: "Use $publisher-create-artifact to prepare or create a Marketplace Publisher artifact in us-ashburn-1 from my Compute image, container image, Helm chart, or Terraform stack."
