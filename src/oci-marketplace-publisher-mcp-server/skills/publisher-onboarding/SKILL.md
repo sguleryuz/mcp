@@ -19,7 +19,7 @@ Identify whether the publisher is a **new partner** or an **existing partner mig
 5. Confirm the publisher registration was submitted in the OCI Console and its **Publisher Profile shows Approved**. `publisher_readiness` now reads the detailed OCI Publisher record, which reports `publisher_status`; compare it with the Console. A returned publisher ID or a submitted registration does not by itself establish approval. If the API status and Console status differ, report both and leave the check pending until resolved.
 6. Confirm the publisher's OCI user has the required Marketplace Publisher IAM access using the `publisher-iam` skill. Policy text alone does not prove effective access; ask an administrator to confirm group membership and scope, or verify an authorized read-only Publisher operation.
 
-For a **paid package listing or private offer**, also check the applicable U.S. legal entity, paid-listing agreement, and supplier setup in [Becoming an OCI Partner and Publisher](https://docs.oracle.com/en-us/iaas/Content/Marketplace/become-oci-partner.htm). Do not apply those paid-package requirements to a lead generation listing.
+For **any paid listing**, check the applicable paid-listing agreement and supplier setup in [Becoming an OCI Partner and Publisher](https://docs.oracle.com/en-us/iaas/Content/Marketplace/become-oci-partner.htm). Supplier verification may still be pending while the publisher creates a draft; label it **not ready to publish** until commercial setup is confirmed. For a **paid package listing or private offer**, also check the U.S. legal entity and paid-offer banking requirements. Do not apply the paid-package U.S. domicile restriction to a non-package Lead Generation or Service listing.
 
 ## New partner path
 
@@ -33,4 +33,4 @@ If migration is needed, confirm that the partner has provided **partner name, OP
 
 ## Completion
 
-Show the checklist with evidence and the next action for each pending or unknown item. Say **ready to create listings** only when every applicable common check and path check is confirmed. For existing partners, also require migration confirmation before editing migrated listings. The MCP server can read Publisher approval, OPN status, and Ashburn subscription from OCI; OCMA activation, Console registration, and migration still require publisher or Oracle evidence outside this API.
+Show the checklist with evidence and the next action for each pending or unknown item. Say **ready to create listings** only when every applicable common check and path check is confirmed; pending supplier verification alone does not block a paid draft, but blocks publication. For existing partners, also require migration confirmation before editing migrated listings. The MCP server can read Publisher approval, OPN status, and Ashburn subscription from OCI; OCMA activation, Console registration, and migration still require publisher or Oracle evidence outside this API.
